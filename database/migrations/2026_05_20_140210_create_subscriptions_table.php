@@ -16,8 +16,8 @@ return new class extends Migration
         $table->foreignId('user_id')->constrained()->onDelete('cascade');
         $table->enum('plan', ['monthly', 'yearly']);
         $table->enum('status', ['active', 'cancelled', 'expired'])->default('active');
-        $table->timestamp('starts_at');
-        $table->timestamp('ends_at');
+        $table->dateTime('starts_at');
+        $table->dateTime('ends_at');
         $table->string('payment_reference')->nullable();
         $table->timestamps();
         });
