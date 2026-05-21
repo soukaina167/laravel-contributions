@@ -1,14 +1,14 @@
+// app/Models/Role.php
 <?php
-
 namespace App\Models;
+use Illuminate\Database\Eloquent\Model;
 
-use Illuminate\Foundation\Auth\User as Authenticatable;
-use App\Models\Role;
-
-class User extends Authenticatable
+class Role extends Model
 {
-    public function role()
+    protected $fillable = ['name'];
+
+    public function users()
     {
-        return $this->belongsTo(Role::class);
+        return $this->hasMany(User::class);
     }
 }
