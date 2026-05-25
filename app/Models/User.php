@@ -10,6 +10,7 @@ use App\Models\Role;
 use App\Models\Skill;
 use App\Models\Course;
 use App\Models\Review;
+use App\Models\Subscription;
 
 class User extends Authenticatable
 {
@@ -31,7 +32,6 @@ class User extends Authenticatable
     ];
 
     // Relations
-
     public function role()
     {
         return $this->belongsTo(Role::class);
@@ -42,9 +42,16 @@ class User extends Authenticatable
         return $this->belongsToMany(Skill::class, 'user_skills');
     }
 
+    // Cours créés par l'utilisateur (en tant qu'instructeur)
     public function courses()
     {
-        return $this->hasMany(Course::class, 'user_id');
+        return $this->hasMany(Course::class, 'instructor_id');
+    }
+
+    // Cours accessibles via la table pivot course_access
+    public function accessibleCourses()
+    {
+        return $this->belongsToMany(Course::class, 'course_access');
     }
 
     public function reviews()
@@ -52,8 +59,12 @@ class User extends Authenticatable
         return $this->hasMany(Review::class);
     }
 
-    // Helpers
+    public function subscription()
+    {
+        return $this->hasOne(Subscription::class);
+    }
 
+    // Helpers
     public function isAdmin()
     {
         return $this->role && $this->role->name === 'admin';
