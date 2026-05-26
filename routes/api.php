@@ -10,6 +10,9 @@ use App\Http\Controllers\ReviewController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\NoteController;
 use App\Http\Controllers\CourseAccessController;
+use App\Http\Controllers\ScheduleController;
+use App\Http\Controllers\AIController;
+
 // Routes publiques
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login',    [AuthController::class, 'login']);
@@ -21,6 +24,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Auth
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me',      [AuthController::class, 'me']);
+    Route::get('/schedule',    [ScheduleController::class, 'index']);
+    Route::post('/schedule',   [ScheduleController::class, 'store']);
+    Route::delete('/schedule', [ScheduleController::class, 'destroy']);
+    Route::post('/ai/ask', [AIController::class, 'ask']);
     // Cours
     Route::post('/courses',         [CourseController::class, 'store']);
     Route::put('/courses/{id}',     [CourseController::class, 'update']);
