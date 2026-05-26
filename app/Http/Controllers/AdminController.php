@@ -81,4 +81,38 @@ class AdminController extends Controller
         $users = User::with('role')->get();
         return response()->json($users);
     }
+    // Gérer catégories (skills)
+public function getSkills()
+{
+    $skills = \App\Models\Skill::all();
+    return response()->json($skills);
+}
+
+public function createSkill(Request $request)
+{
+    $request->validate([
+        'name'  => 'required|string|max:255',
+        'level' => 'required|in:beginner,intermediate,advanced',
+    ]);
+
+    $skill = \App\Models\Skill::create([
+        'name'  => $request->name,
+        'level' => $request->level,
+    ]);
+
+    return response()->json([
+        'message' => 'Catégorie créée avec succès',
+        'skill'   => $skill,
+    ], 201);
+}
+
+public function deleteSkill($id)
+{
+    $skill = \App\Models\Skill::findOrFail($id);
+    $skill->delete();
+
+    return response()->json([
+        'message' => 'Catégorie supprimée avec succès'
+    ]);
+}
 }

@@ -10,12 +10,15 @@ use App\Http\Controllers\ReviewController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\NoteController;
 use App\Http\Controllers\CourseAccessController;
+use App\Http\Controllers\ForumController;
+use App\Http\Controllers\SearchController;
 // Routes publiques
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login',    [AuthController::class, 'login']);
 Route::get('/courses',   [CourseController::class, 'index']);
 Route::get('/courses/search', [CourseController::class, 'search']);
 Route::get('/courses/{id}',   [CourseController::class, 'show']);
+Route::get('/search', [SearchController::class, 'search']);
 // Routes protégées
 Route::middleware('auth:sanctum')->group(function () {
     // Auth
@@ -36,6 +39,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/unban-user/{id}',        [AdminController::class, 'unbanUser']);
         Route::get('/statistics',              [AdminController::class, 'statistics']);
         Route::get('/users',                   [AdminController::class, 'users']);
+        Route::get('/skills',         [AdminController::class, 'getSkills']);
+        Route::post('/skills',        [AdminController::class, 'createSkill']);
+        Route::delete('/skills/{id}', [AdminController::class, 'deleteSkill']);
     });
     // Profil
     Route::get('/profile',       [ProfileController::class, 'show']);
@@ -60,4 +66,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/courses/{id}/notes',      [NoteController::class, 'store']);
     Route::delete('/notes/{id}',            [NoteController::class, 'destroy']);
     Route::get('/notes/{id}/download',      [NoteController::class, 'download']);
+    // Forum
+    Route::get('/courses/{id}/forum',              [ForumController::class, 'index']);
+    Route::post('/courses/{id}/forum',             [ForumController::class, 'store']);
+    Route::post('/forum/messages/{id}/reply',      [ForumController::class, 'reply']);
+    Route::delete('/forum/messages/{id}',          [ForumController::class, 'destroy']);
 });
