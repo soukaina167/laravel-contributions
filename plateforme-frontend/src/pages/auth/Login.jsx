@@ -18,12 +18,12 @@ export default function Login() {
     try {
       const res = await api.post('/login', form)
       setAuth(res.data.user, res.data.token)
-
       if (res.data.user.role?.name === 'admin') {
         navigate('/admin')
       } else {
-        navigate('/')
-      }
+    navigate('/profile') // 👈 change ici
+    }
+
     } catch (err) {
       setError(err.response?.data?.message || 'Erreur de connexion')
     } finally {
