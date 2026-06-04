@@ -1,96 +1,190 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import api from '../../lib/axios'
+import Topbar from '../../components/Topbar'
+import useAuthStore from '../../store/authStore'
 
 export default function CourseList() {
-  const [courses, setCourses]   = useState([])
-  const [search, setSearch]     = useState('')
-  const [loading, setLoading]   = useState(true)
+  const [courses, setCourses] = useState([])
+  const [loading, setLoading] = useState(true)
+  const { token }             = useAuthStore()
+  const [searchParams]        = useSearchParams()
 
   useEffect(() => {
-    fetchCourses()
-  }, [])
+    const q = searchParams.get('q')
+    q ? searchCourses(q) : fetchCourses()
+  }, [searchParams])
 
   const fetchCourses = async () => {
     try {
       const res = await api.get('/courses')
       setCourses(res.data)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
   }
 
-  const handleSearch = async (e) => {
-    e.preventDefault()
-    if (!search) return fetchCourses()
-
+  const searchCourses = async (q) => {
     try {
-      const res = await api.get(`/search?q=${search}`)
+      const res = await api.get(`/search?q=${q}`)
       setCourses(res.data)
-    } catch (err) {
-      console.error(err)
-    }
+    } finally { setLoading(false) }
   }
 
-  if (loading) return (
-    <div className="flex justify-center mt-20">
-      <p className="text-gray-500">Chargement...</p>
-    </div>
-  )
+  const cardStyle = {
+    background: '#fff',
+    border: '0.5px solid #e5e7eb',
+    borderRadius: '10px',
+    overflow: 'hidden',
+    textDecoration: 'none',
+    display: 'block',
+    transition: 'box-shadow 0.15s',
+  }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Tous les cours</h1>
+    <div>
+      <Topbar />
+      <div style={{ padding: '24px' }}>
 
-      {/* Recherche */}
-      <form onSubmit={handleSearch} className="flex gap-2 mb-8">
-        <input
-          type="text"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Rechercher un cours..."
-          className="flex-1 border rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <button
-          type="submit"
-          className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
-        >
-          Rechercher
-        </button>
-      </form>
-
-      {/* Liste des cours */}
-      {courses.length === 0 ? (
-        <p className="text-gray-500 text-center">Aucun cours disponible</p>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {courses.map(course => (
-            <Link
-              key={course.id}
-              to={`/courses/${course.id}`}
-              className="bg-white rounded-lg shadow hover:shadow-md transition p-4"
-            >
-              <h2 className="text-xl font-semibold mb-2">{course.title}</h2>
-              <p className="text-gray-500 text-sm mb-3 line-clamp-2">
-                {course.description}
+        {/* Hero */}
+        {!token && (
+          <div style={{
+            background: '#0f1f3d',
+            borderRadius: '10px',
+            padding: '36px 40px',
+            marginBottom: '24px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}>
+            <div>
+              <h1 style={{
+                color: '#fff', fontSize: '22px',
+                fontWeight: 600, marginBottom: '8px', letterSpacing: '-0.3px',
+              }}>
+                Échangez vos compétences, développez votre avenir.
+              </h1>
+              <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '13px', lineHeight: 1.6, maxWidth: '420px' }}>
+                SkillSwap connecte les apprenants et les formateurs pour un échange de savoirs gagnant-gagnant.
               </p>
-              <div className="flex justify-between items-center">
-                <span className="text-blue-600 font-medium">
-                  {course.credits_cost} crédits
-                </span>
-                <span className="text-yellow-500">
-                  ⭐ {course.rating || 0}
-                </span>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                <Link to="/register" style={{
+                  background: '#1a56db', color: '#fff',
+                  padding: '9px 20px', borderRadius: '6px',
+                  fontSize: '13px', fontWeight: 500, textDecoration: 'none',
+                }}>
+                  Découvrir les cours
+                </Link>
+                <Link to="/login" style={{
+                  background: 'rgba(255,255,255,0.08)',
+                  border: '0.5px solid rgba(255,255,255,0.15)',
+                  color: 'rgba(255,255,255,0.8)',
+                  padding: '9px 20px', borderRadius: '6px',
+                  fontSize: '13px', textDecoration: 'none',
+                }}>
+                  Se connecter
+                </Link>
               </div>
-              <p className="text-gray-400 text-xs mt-2">
-                Par {course.instructor?.name}
-              </p>
-            </Link>
-          ))}
+            </div>
+          </div>
+        )}
+
+        {/* Section header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <span style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>
+            Cours disponibles
+          </span>
+          <span style={{ fontSize: '12px', color: '#6b7280' }}>
+            {courses.length} cours
+          </span>
         </div>
-      )}
+
+        {/* Grille */}
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '60px', color: '#9ca3af', fontSize: '13px' }}>
+            Chargement...
+          </div>
+        ) : courses.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '60px', color: '#9ca3af', fontSize: '13px' }}>
+            Aucun cours disponible.
+          </div>
+        ) : (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+            gap: '16px',
+          }}>
+            {courses.map(course => (
+              <Link key={course.id} to={`/courses/${course.id}`} style={cardStyle}>
+                {/* Thumbnail */}
+                <div style={{
+                  height: '120px',
+                  background: '#e8edf5',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <div style={{
+                    width: '44px', height: '44px',
+                    borderRadius: '10px', background: '#1a56db',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <i className="ti ti-video" style={{ color: '#fff', fontSize: '20px' }} />
+                  </div>
+                </div>
+
+                <div style={{ padding: '14px' }}>
+                  <div style={{
+                    fontSize: '10px', fontWeight: 600,
+                    color: '#1a56db', letterSpacing: '0.5px',
+                    textTransform: 'uppercase', marginBottom: '4px',
+                  }}>
+                    Formation
+                  </div>
+                  <div style={{
+                    fontSize: '13px', fontWeight: 500,
+                    color: '#111827', lineHeight: 1.4,
+                    marginBottom: '10px',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                  }}>
+                    {course.title}
+                  </div>
+
+                  <div style={{
+                    display: 'flex', justifyContent: 'space-between',
+                    alignItems: 'center', fontSize: '12px',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#6b7280' }}>
+                      <i className="ti ti-star" style={{ color: '#f59e0b', fontSize: '12px' }} />
+                      {course.rating || 0}
+                    </div>
+                    <span style={{ color: '#1a56db', fontWeight: 500 }}>
+                      {course.credits_cost} crédits
+                    </span>
+                  </div>
+
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    marginTop: '10px', paddingTop: '10px',
+                    borderTop: '0.5px solid #f3f4f6',
+                  }}>
+                    <div style={{
+                      width: '20px', height: '20px', borderRadius: '50%',
+                      background: '#dbeafe',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '10px', fontWeight: 600, color: '#1a56db',
+                    }}>
+                      {course.instructor?.name?.charAt(0)}
+                    </div>
+                    <span style={{ fontSize: '11px', color: '#9ca3af' }}>
+                      {course.instructor?.name}
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

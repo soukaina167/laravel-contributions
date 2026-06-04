@@ -1,6 +1,11 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { useEffect } from 'react'
+import useAuthStore from './store/authStore'
+
 import ProtectedRoute from './components/ProtectedRoute'
 import Navbar from './components/Navbar'
+import Sidebar from './components/Sidebar'
+
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import Home from './pages/Home'
@@ -11,47 +16,63 @@ import Notes from './pages/notes/Notes'
 import Scheduler from './pages/scheduler/Scheduler'
 import AIAssistant from './pages/AI/AIAssistant'
 import AdminDashboard from './pages/admin/AdminDashboard'
+import AdminVideos from './pages/admin/AdminVideos'
+import AdminUsers from './pages/admin/AdminUsers'
 import CourseList from './pages/courses/CourseList'
 import CourseDetail from './pages/courses/CourseDetail'
 import CreateCourse from './pages/courses/CreateCourse'
+import NotFound from './pages/NotFound'
 
 function Layout({ children }) {
   return (
-    <div className="flex">
-      <Navbar />
-      <main className="ml-64 flex-1 p-6 min-h-screen bg-gray-50">
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
+      <Sidebar />
+      <main style={{ marginLeft: '220px', flex: 1, minHeight: '100vh', background: '#f4f6f9' }}>
         {children}
       </main>
     </div>
   )
 }
 
-function App() {
+export default function App() {
+  const { token, fetchUser } = useAuthStore()
+
+  useEffect(() => {
+    if (token) fetchUser()
+  }, [token])
+
   return (
     <BrowserRouter>
       <Routes>
+        {/* Routes publiques */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
+        {/* Routes accessibles avec ou sans sidebar */}
+        <Route path="/" element={token ? <Layout><Home /></Layout> : <Home />} />
+        <Route path="/courses/:id" element={token ? <Layout><CourseDetail /></Layout> : <CourseDetail />} />
+
+        {/* Routes protégées utilisateur */}
         <Route element={<ProtectedRoute />}>
-          <Route path="/" element={<Layout><Home /></Layout>} />
+          <Route path="/courses/create" element={<Layout><CreateCourse /></Layout>} />
           <Route path="/profile" element={<Layout><Profile /></Layout>} />
           <Route path="/subscription" element={<Layout><Subscription /></Layout>} />
-          <Route path="/courses" element={<Layout><CourseList /></Layout>} />
-          <Route path="/courses/create" element={<Layout><CreateCourse /></Layout>} />
-          <Route path="/courses/:id" element={<Layout><CourseDetail /></Layout>} />
           <Route path="/courses/:id/forum" element={<Layout><Forum /></Layout>} />
           <Route path="/courses/:courseId/notes" element={<Layout><Notes /></Layout>} />
           <Route path="/scheduler" element={<Layout><Scheduler /></Layout>} />
           <Route path="/ai" element={<Layout><AIAssistant /></Layout>} />
         </Route>
 
+        {/* Routes protégées admin */}
         <Route element={<ProtectedRoute role="admin" />}>
           <Route path="/admin" element={<Layout><AdminDashboard /></Layout>} />
+          <Route path="/admin/videos" element={<Layout><AdminVideos /></Layout>} />
+          <Route path="/admin/users" element={<Layout><AdminUsers /></Layout>} />
         </Route>
+
+        {/* 404 */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   )
 }
-
-export default App

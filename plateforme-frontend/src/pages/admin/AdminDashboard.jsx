@@ -1,152 +1,93 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import api from '../../lib/axios'
+import Topbar from '../../components/Topbar'
 
 export default function AdminDashboard() {
-  const [stats, setStats]     = useState(null)
-  const [pending, setPending] = useState([])
-  const [users, setUsers]     = useState([])
-  const [tab, setTab]         = useState('stats')
+  const [stats, setStats] = useState(null)
 
   useEffect(() => {
-    fetchStats()
-    fetchPending()
-    fetchUsers()
+    api.get('/admin/statistics').then(res => setStats(res.data))
   }, [])
 
-  const fetchStats   = async () => {
-    const res = await api.get('/admin/statistics')
-    setStats(res.data)
-  }
-
-  const fetchPending = async () => {
-    const res = await api.get('/admin/pending-videos')
-    setPending(res.data)
-  }
-
-  const fetchUsers   = async () => {
-    const res = await api.get('/admin/users')
-    setUsers(res.data)
-  }
-
-  const validateVideo = async (id) => {
-    await api.post(`/admin/validate-video/${id}`)
-    fetchPending()
-  }
-
-  const rejectVideo   = async (id) => {
-    await api.post(`/admin/reject-video/${id}`)
-    fetchPending()
-  }
-
-  const banUser       = async (id) => {
-    await api.post(`/admin/ban-user/${id}`)
-    fetchUsers()
-  }
+  const statCards = stats ? [
+    { label: 'Utilisateurs',    value: stats.total_users,    icon: 'ti-users',     sub: 'inscrits' },
+    { label: 'Cours publiés',   value: stats.total_courses,  icon: 'ti-book',      sub: 'au total' },
+    { label: 'En attente',      value: stats.pending_videos, icon: 'ti-clock',     sub: 'à modérer', alert: true },
+    { label: 'Abonnés premium', value: stats.premium_users,  icon: 'ti-star',      sub: 'utilisateurs' },
+  ] : []
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Dashboard Admin</h1>
+    <div>
+      <Topbar title="Tableau de bord" />
+      <div style={{ padding: '24px' }}>
 
-      {/* Tabs */}
-      <div className="flex gap-4 mb-6">
-        {['stats', 'videos', 'users'].map(t => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-4 py-2 rounded ${
-              tab === t
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 text-gray-700'
-            }`}
-          >
-            {t === 'stats' ? 'Statistiques'
-             : t === 'videos' ? 'Vidéos en attente'
-             : 'Utilisateurs'}
-          </button>
-        ))}
-      </div>
+        {/* Stat cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px', marginBottom: '28px' }}>
+          {statCards.map(card => (
+            <div key={card.label} style={{
+              background: '#fff', border: '0.5px solid #e5e7eb',
+              borderRadius: '10px', padding: '16px 20px',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '6px' }}>
+                    {card.label}
+                  </div>
+                  <div style={{
+                    fontSize: '26px', fontWeight: 600,
+                    color: card.alert ? '#dc2626' : '#111827',
+                  }}>
+                    {card.value}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '3px' }}>
+                    {card.sub}
+                  </div>
+                </div>
+                <div style={{
+                  width: '36px', height: '36px', borderRadius: '8px',
+                  background: card.alert ? '#fef2f2' : '#eff5ff',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <i className={`ti ${card.icon}`} style={{
+                    fontSize: '18px',
+                    color: card.alert ? '#dc2626' : '#1a56db',
+                  }} />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
 
-      {/* Statistiques */}
-      {tab === 'stats' && stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* Raccourcis */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px',
+        }}>
           {[
-            { label: 'Utilisateurs',     value: stats.total_users },
-            { label: 'Cours',            value: stats.total_courses },
-            { label: 'En attente',       value: stats.pending_videos },
-            { label: 'Premium',          value: stats.premium_users },
-          ].map(s => (
-            <div key={s.label} className="bg-white rounded-lg shadow p-4 text-center">
-              <p className="text-3xl font-bold text-blue-600">{s.value}</p>
-              <p className="text-gray-500">{s.label}</p>
-            </div>
+            { to: '/admin/videos', icon: 'ti-video',  label: 'Modérer les vidéos', desc: 'Valider ou rejeter les soumissions' },
+            { to: '/admin/users',  icon: 'ti-users',  label: 'Gérer les utilisateurs', desc: 'Bannir, débannir, consulter' },
+          ].map(item => (
+            <Link key={item.to} to={item.to} style={{
+              background: '#fff', border: '0.5px solid #e5e7eb',
+              borderRadius: '10px', padding: '20px',
+              textDecoration: 'none', display: 'block',
+            }}>
+              <div style={{
+                width: '40px', height: '40px', borderRadius: '8px',
+                background: '#eff5ff', marginBottom: '12px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <i className={`ti ${item.icon}`} style={{ color: '#1a56db', fontSize: '20px' }} />
+              </div>
+              <div style={{ fontSize: '14px', fontWeight: 500, color: '#111827', marginBottom: '4px' }}>
+                {item.label}
+              </div>
+              <div style={{ fontSize: '12px', color: '#9ca3af' }}>{item.desc}</div>
+            </Link>
           ))}
         </div>
-      )}
 
-      {/* Vidéos en attente */}
-      {tab === 'videos' && (
-        <div className="space-y-4">
-          {pending.length === 0 ? (
-            <p className="text-gray-500">Aucune vidéo en attente</p>
-          ) : pending.map(course => (
-            <div key={course.id} className="bg-white rounded-lg shadow p-4 flex justify-between items-center">
-              <div>
-                <h3 className="font-semibold">{course.title}</h3>
-                <p className="text-gray-500 text-sm">Par {course.instructor?.name}</p>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => validateVideo(course.id)}
-                  className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-                >
-                  Valider
-                </button>
-                <button
-                  onClick={() => rejectVideo(course.id)}
-                  className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-                >
-                  Rejeter
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Utilisateurs */}
-      {tab === 'users' && (
-        <div className="space-y-4">
-          {users.map(user => (
-            <div key={user.id} className="bg-white rounded-lg shadow p-4 flex justify-between items-center">
-              <div>
-                <h3 className="font-semibold">{user.name}</h3>
-                <p className="text-gray-500 text-sm">{user.email}</p>
-                <span className={`text-xs px-2 py-1 rounded ${
-                  user.role?.name === 'admin'
-                    ? 'bg-red-100 text-red-600'
-                    : user.role?.name === 'premium'
-                    ? 'bg-yellow-100 text-yellow-600'
-                    : 'bg-gray-100 text-gray-600'
-                }`}>
-                  {user.role?.name}
-                </span>
-              </div>
-              {user.role?.name !== 'admin' && (
-                <button
-                  onClick={() => banUser(user.id)}
-                  className={`px-4 py-2 rounded text-white ${
-                    user.is_banned
-                      ? 'bg-green-500 hover:bg-green-600'
-                      : 'bg-red-500 hover:bg-red-600'
-                  }`}
-                >
-                  {user.is_banned ? 'Débannir' : 'Bannir'}
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+      </div>
     </div>
   )
 }
