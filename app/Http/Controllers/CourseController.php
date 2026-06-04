@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Course;
 use Illuminate\Http\Request;
 use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
+use Cloudinary\Api\Upload\UploadApi;
 
 class CourseController extends Controller
 {
@@ -31,33 +32,71 @@ class CourseController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'title'       => 'required|string|max:255',
-            'description' => 'required|string',
-            'video'       => 'required|file|mimes:mp4,avi,mov|max:102400',
-            'credits_cost'=> 'required|integer|min:0',
+            'title'        => 'required|string|max:255',
+            'description'  => 'required|string',
+            'video'        => 'nullable|file|mimes:mp4,avi,mov|max:102400',
+            'credits_cost' => 'required|integer|min:0',
         ]);
 
-        // Upload vidéo sur Cloudinary
-        $uploadedVideo = Cloudinary::uploadVideo(
+        $videoUrl = null;
+        $videoPublicId = null;
+        $playbackUrl = null;
+
+        if ($request->hasFile('video')) {
+    try {
+        // Récupère l'instance Cloudinary
+        $cloudinary = app(\Cloudinary\Cloudinary::class);
+
+        // Upload via l'API officielle
+        $uploadedVideo = $cloudinary->uploadApi()->upload(
             $request->file('video')->getRealPath(),
-            ['folder' => 'plateforme-cours/videos']
+            [
+                'resource_type' => 'video',
+                'folder' => 'plateforme-cours/videos'
+            ]
         );
 
-        $videoUrl = $uploadedVideo->getSecurePath();
+        // 🔍 Debug : décommente pour voir la réponse brute
+        // dd($uploadedVideo);
 
-        // Créer le cours
+        // Lis directement les clés du tableau
+        $videoUrl = $uploadedVideo['secure_url'] ?? null;
+        $videoPublicId = $uploadedVideo['public_id'] ?? null;
+        $playbackUrl = $uploadedVideo['playback_url'] ?? null;
+
+        if (!$videoUrl) {
+            return response()->json([
+                'message' => 'Erreur : Cloudinary n’a pas renvoyé d’URL valide.',
+                'response' => $uploadedVideo
+            ], 500);
+        }
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'message' => 'Erreur upload vidéo : ' . $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine()
+        ], 500);
+    }
+}
+
+           
+            
+
         $course = Course::create([
-            'title'        => $request->title,
-            'description'  => $request->description,
-            'video_url'    => $videoUrl,
-            'credits_cost' => $request->credits_cost,
-            'instructor_id'=> auth()->id(),
-            'status'       => 'pending', // en attente de validation admin
+            'title'           => $request->title,
+            'description'     => $request->description,
+            'video_url'       => $videoUrl,
+            'video_public_id' => $videoPublicId,
+            'credits_cost'    => $request->credits_cost,
+            'instructor_id'   => auth()->id(),
+            'status'          => 'pending',
         ]);
 
         return response()->json([
             'message' => 'Cours soumis pour validation',
             'course'  => $course,
+            'playback_url' => $playbackUrl
         ], 201);
     }
 
@@ -66,11 +105,8 @@ class CourseController extends Controller
     {
         $course = Course::findOrFail($id);
 
-        // Vérifier que c'est bien l'instructeur
         if ($course->instructor_id !== auth()->id()) {
-            return response()->json([
-                'message' => 'Non autorisé'
-            ], 403);
+            return response()->json(['message' => 'Non autorisé'], 403);
         }
 
         $request->validate([
@@ -79,9 +115,7 @@ class CourseController extends Controller
             'credits_cost'=> 'integer|min:0',
         ]);
 
-        $course->update($request->only([
-            'title', 'description', 'credits_cost'
-        ]));
+        $course->update($request->only(['title', 'description', 'credits_cost']));
 
         return response()->json([
             'message' => 'Cours modifié avec succès',
@@ -89,22 +123,26 @@ class CourseController extends Controller
         ]);
     }
 
-    // Supprimer un cours
+    // Supprimer un cours + suppression vidéo Cloudinary
     public function destroy($id)
     {
         $course = Course::findOrFail($id);
 
         if ($course->instructor_id !== auth()->id()) {
-            return response()->json([
-                'message' => 'Non autorisé'
-            ], 403);
+            return response()->json(['message' => 'Non autorisé'], 403);
+        }
+
+        if ($course->video_public_id) {
+            try {
+                (new UploadApi())->destroy($course->video_public_id, ['resource_type' => 'video']);
+            } catch (\Exception $e) {
+                // On ignore l’erreur Cloudinary mais on continue la suppression du cours
+            }
         }
 
         $course->delete();
 
-        return response()->json([
-            'message' => 'Cours supprimé avec succès'
-        ]);
+        return response()->json(['message' => 'Cours supprimé avec succès']);
     }
 
     // Mes cours (instructeur)

@@ -55,6 +55,14 @@
                     </header>
 
                     <main class="mt-6">
+                        @if(isset($course) && $course->video_url)
+                            <div class="mb-6">
+                                <video controls width="640" class="rounded-lg shadow">
+                                    <source src="{{ $course->video_url }}" type="video/mp4">
+                                    Votre navigateur ne supporte pas la vidéo.
+                                </video>
+                            </div>
+                        @endif
                         <div class="grid gap-6 lg:grid-cols-2 lg:gap-8">
                             <a
                                 href="https://laravel.com/docs"

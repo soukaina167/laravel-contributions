@@ -1,7 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
+import Navbar from './components/Navbar'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
+import Home from './pages/Home'
 import Profile from './pages/profile/Profile'
 import Subscription from './pages/subscription/Subscription'
 import Forum from './pages/forum/Forum'
@@ -13,28 +15,39 @@ import CourseList from './pages/courses/CourseList'
 import CourseDetail from './pages/courses/CourseDetail'
 import CreateCourse from './pages/courses/CreateCourse'
 
+function Layout({ children }) {
+  return (
+    <div className="flex">
+      <Navbar />
+      <main className="ml-64 flex-1 p-6 min-h-screen bg-gray-50">
+        {children}
+      </main>
+    </div>
+  )
+}
+
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Navigate to="/login" />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
         <Route element={<ProtectedRoute />}>
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/subscription" element={<Subscription />} />
-          <Route path="/courses" element={<CourseList />} />
-          <Route path="/courses/:id" element={<CourseDetail />} />
-          <Route path="/courses/create" element={<CreateCourse />} />
-          <Route path="/courses/:id/forum" element={<Forum />} />
-          <Route path="/courses/:courseId/notes" element={<Notes />} />
-          <Route path="/scheduler" element={<Scheduler />} />
-          <Route path="/ai" element={<AIAssistant />} />
+          <Route path="/" element={<Layout><Home /></Layout>} />
+          <Route path="/profile" element={<Layout><Profile /></Layout>} />
+          <Route path="/subscription" element={<Layout><Subscription /></Layout>} />
+          <Route path="/courses" element={<Layout><CourseList /></Layout>} />
+          <Route path="/courses/create" element={<Layout><CreateCourse /></Layout>} />
+          <Route path="/courses/:id" element={<Layout><CourseDetail /></Layout>} />
+          <Route path="/courses/:id/forum" element={<Layout><Forum /></Layout>} />
+          <Route path="/courses/:courseId/notes" element={<Layout><Notes /></Layout>} />
+          <Route path="/scheduler" element={<Layout><Scheduler /></Layout>} />
+          <Route path="/ai" element={<Layout><AIAssistant /></Layout>} />
         </Route>
 
         <Route element={<ProtectedRoute role="admin" />}>
-          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin" element={<Layout><AdminDashboard /></Layout>} />
         </Route>
       </Routes>
     </BrowserRouter>
