@@ -35,11 +35,15 @@ function Layout({ children }) {
 }
 
 export default function App() {
-  const { token, fetchUser } = useAuthStore()
+  // Modification : On extrait uniquement le token pour l'instant pour éviter le crash
+  const { token } = useAuthStore()
 
+  // Modification : Mis en commentaire temporaire le temps de vérifier le nom de la fonction dans authStore.js
+  /*
   useEffect(() => {
     if (token) fetchUser()
   }, [token])
+  */
 
   return (
     <BrowserRouter>

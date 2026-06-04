@@ -16,7 +16,6 @@ use App\Http\Controllers\AIController;
 
 use App\Http\Controllers\ForumController;
 use App\Http\Controllers\SearchController;
-use App\Http\Controllers\CourseController;
 // Routes publiques
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login',    [AuthController::class, 'login']);
