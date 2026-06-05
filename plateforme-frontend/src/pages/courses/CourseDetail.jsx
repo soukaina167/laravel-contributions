@@ -20,6 +20,8 @@ export default function CourseDetail() {
   const [message, setMessage]     = useState('')
   const [loading, setLoading]     = useState(true)
   const [review, setReview]       = useState({ rating: 5, comment: '' })
+  const [newNote, setNewNote]   = useState({ type: 'pdf', file: null })
+  const [uploading, setUploading] = useState(false)
   const { token, user }           = useAuthStore()
 
   useEffect(() => {
@@ -59,7 +61,25 @@ export default function CourseDetail() {
       Cours introuvable.
     </div>
   )
-
+  const handleUploadNote = async (e) => {
+  e.preventDefault()
+  if (!newNote.file) return
+  setUploading(true)
+  const formData = new FormData()
+  formData.append('type', newNote.type)
+  formData.append('file', newNote.file)
+  try {
+    await api.post(`/courses/${id}/notes`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    setNewNote({ type: 'pdf', file: null })
+    fetchNotes()
+  } catch (err) {
+    console.error(err)
+  } finally {
+    setUploading(false)
+  }
+}
   return (
     <div>
       <Topbar title={course.title} />
@@ -166,61 +186,121 @@ export default function CourseDetail() {
           )}
 
           {/* Tab — Notes & PDF */}
-          {activeTab === 'notes' && (
-            <div style={{ background: '#fff', border: '0.5px solid #e5e7eb', borderRadius: '10px', padding: '20px' }}>
-              <h2 style={{ fontSize: '14px', fontWeight: 600, color: '#111827', marginBottom: '16px' }}>
-                Ressources du cours
-              </h2>
-              {notes.length === 0 ? (
-                <p style={{ color: '#9ca3af', fontSize: '13px', textAlign: 'center', padding: '32px' }}>
-                  Aucune ressource disponible.
-                </p>
-              ) : notes.map(note => (
-                <div key={note.id} style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '12px', border: '0.5px solid #f3f4f6',
-                  borderRadius: '8px', marginBottom: '8px',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{
-                      width: '36px', height: '36px', borderRadius: '8px',
-                      background: '#eff5ff',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      <i className="ti ti-file" style={{ color: '#1a56db', fontSize: '16px' }} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '13px', fontWeight: 500, color: '#111827' }}>
-                        {note.type.toUpperCase()}
-                      </div>
-                      <div style={{ fontSize: '11px', color: '#9ca3af' }}>
-                        {note.url.substring(0, 40)}...
-                      </div>
-                    </div>
-                  </div>
-                  {user?.role?.name === 'premium' ? (
-                    <a href={note.url} target="_blank" rel="noreferrer" style={{
-                      background: '#1a56db', color: '#fff',
-                      padding: '6px 14px', borderRadius: '6px',
-                      fontSize: '12px', textDecoration: 'none', fontWeight: 500,
-                    }}>
-                      Télécharger
-                    </a>
-                  ) : (
-                    <Link to="/subscription" style={{
-                      background: '#fef3c7',
-                      color: '#92400e',
-                      padding: '6px 14px', borderRadius: '6px',
-                      fontSize: '12px', textDecoration: 'none', fontWeight: 500,
-                      border: '0.5px solid #fcd34d',
-                    }}>
-                      Premium requis
-                    </Link>
-                  )}
-                </div>
-              ))}
+        {activeTab === 'notes' && (
+  <div style={{ background: '#fff', border: '0.5px solid #e5e7eb', borderRadius: '10px', padding: '20px' }}>
+    <h2 style={{ fontSize: '14px', fontWeight: 600, color: '#111827', marginBottom: '16px' }}>
+      Ressources du cours
+    </h2>
+
+    {token && (
+      <form onSubmit={handleUploadNote} style={{
+        background: '#f9fafb', border: '0.5px solid #e5e7eb',
+        borderRadius: '8px', padding: '14px', marginBottom: '20px',
+      }}>
+        <div style={{ fontSize: '13px', fontWeight: 500, color: '#374151', marginBottom: '10px' }}>
+          Déposer une ressource
+        </div>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <select
+            value={newNote.type}
+            onChange={e => setNewNote({ ...newNote, type: e.target.value })}
+            style={{
+              border: '0.5px solid #d1d5db', borderRadius: '6px',
+              padding: '6px 10px', fontSize: '13px', background: '#fff',
+            }}
+          >
+            <option value="pdf">PDF</option>
+            <option value="image">Image</option>
+            <option value="document">Document</option>
+          </select>
+          <input
+            type="file"
+            onChange={e => setNewNote({ ...newNote, file: e.target.files[0] })}
+            style={{ fontSize: '13px', flex: 1 }}
+          />
+          <button
+            type="submit"
+            disabled={uploading}
+            style={{
+              background: uploading ? '#93c5fd' : '#1a56db',
+              color: '#fff', border: 'none',
+              padding: '7px 16px', borderRadius: '6px',
+              fontSize: '13px', fontWeight: 500,
+              cursor: uploading ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {uploading ? 'Envoi...' : 'Déposer'}
+          </button>
+        </div>
+      </form>
+    )}
+
+    {notes.length === 0 ? (
+      <p style={{ color: '#9ca3af', fontSize: '13px', textAlign: 'center', padding: '32px' }}>
+        Aucune ressource disponible.
+      </p>
+    ) : notes.map(note => (
+      <div key={note.id} style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '12px', border: '0.5px solid #f3f4f6',
+        borderRadius: '8px', marginBottom: '8px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{
+            width: '36px', height: '36px', borderRadius: '8px',
+            background: '#eff5ff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <i className="ti ti-file" style={{ color: '#1a56db', fontSize: '16px' }} />
+          </div>
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: 500, color: '#111827' }}>
+              {note.type.toUpperCase()}
             </div>
-          )}
+            <div style={{ fontSize: '11px', color: '#9ca3af' }}>
+              Ajouté le {new Date(note.created_at).toLocaleDateString()}
+            </div>
+          </div>
+        </div>
+
+      {(user?.role?.name === 'premium' || user?.role?.name === 'admin') ? (
+  <a
+    href={note.url}
+    target="_blank"
+    rel="noreferrer"
+    style={{
+      background: '#1a56db',
+      color: '#fff',
+      padding: '6px 14px',
+      borderRadius: '6px',
+      fontSize: '12px',
+      textDecoration: 'none',
+      fontWeight: 500,
+    }}
+  >
+    Télécharger
+  </a>
+) : (
+  <Link
+    to="/subscription"
+    style={{
+      background: '#fef3c7',
+      color: '#92400e',
+      padding: '6px 14px',
+      borderRadius: '6px',
+      fontSize: '12px',
+      textDecoration: 'none',
+      fontWeight: 500,
+      border: '0.5px solid #fcd34d',
+    }}
+  >
+    Premium requis
+  </Link>
+)}
+      </div>
+    ))}
+  </div>
+)}
 
           {/* Tab — Forum */}
           {activeTab === 'forum' && (

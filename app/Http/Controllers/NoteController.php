@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\Media;
@@ -9,42 +8,38 @@ use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 
 class NoteController extends Controller
 {
-    // Voir les notes/ressources d'un cours
+    // Voir les notes — tout utilisateur connecté
     public function index($courseId)
     {
-        // Vérifier accès au cours
-        $user = request()->user();
-        $course = Course::findOrFail($courseId);
-
-        $hasAccess = $user->accessibleCourses()
-            ->where('course_id', $courseId)
-            ->exists();
-
-        if (!$hasAccess && !$user->isPremium()) {
-            return response()->json([
-                'message' => 'Accès refusé - Abonnement requis'
-            ], 403);
-        }
+        Course::findOrFail($courseId);
 
         $media = Media::where('course_id', $courseId)->get();
 
         return response()->json($media);
     }
 
-    // Ajouter une note/ressource
+    // Ajouter une note — instructeur ou admin seulement
     public function store(Request $request, $courseId)
     {
+        $user   = $request->user();
+        $course = Course::findOrFail($courseId);
+
+        // Vérifier que c'est l'instructeur ou un admin
+        if ($course->instructor_id !== $user->id && $user->role_id !== 1) {
+            return response()->json([
+                'message' => 'Seul l\'instructeur peut ajouter des ressources'
+            ], 403);
+        }
+
         $request->validate([
             'type' => 'required|in:pdf,image,document',
             'file' => 'required|file|max:20480',
         ]);
 
-        Course::findOrFail($courseId);
-
         // Upload sur Cloudinary
         $uploaded = Cloudinary::upload(
             $request->file('file')->getRealPath(),
-            ['folder' => 'plateforme-cours/notes']
+            ['folder' => 'skillswap/notes']
         );
 
         $media = Media::create([
@@ -59,10 +54,18 @@ class NoteController extends Controller
         ], 201);
     }
 
-    // Supprimer une note
+    // Supprimer — instructeur ou admin seulement
     public function destroy(Request $request, $id)
     {
-        $media = Media::findOrFail($id);
+        $user  = $request->user();
+        $media = Media::with('course')->findOrFail($id);
+
+        if ($media->course->instructor_id !== $user->id && $user->role_id !== 1) {
+            return response()->json([
+                'message' => 'Non autorisé'
+            ], 403);
+        }
+
         $media->delete();
 
         return response()->json([
@@ -70,18 +73,17 @@ class NoteController extends Controller
         ]);
     }
 
-    // Télécharger ressource (premium only)
+    // Télécharger — premium ou admin seulement
     public function download(Request $request, $id)
     {
-        $user = $request->user();
+        $user  = $request->user();
+        $media = Media::findOrFail($id);
 
-        if (!$user->isPremium()) {
+        if ($user->role_id !== 3 && $user->role_id !== 1) {
             return response()->json([
                 'message' => 'Abonnement premium requis pour télécharger'
             ], 403);
         }
-
-        $media = Media::findOrFail($id);
 
         return response()->json([
             'url' => $media->url
