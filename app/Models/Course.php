@@ -44,4 +44,9 @@ class Course extends Model
     {
         return $this->hasOne(Chat::class);
     }
+    public function videos()
+    {
+        return $this->hasMany(Video::class);
+    }
+
 }

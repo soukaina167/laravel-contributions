@@ -65,6 +65,7 @@ export default function App() {
           <Route path="/courses/:courseId/notes" element={<Layout><Notes /></Layout>} />
           <Route path="/scheduler" element={<Layout><Scheduler /></Layout>} />
           <Route path="/ai" element={<Layout><AIAssistant /></Layout>} />
+          <Route path="/my-courses" element={<Layout><CourseList /></Layout>} />
         </Route>
 
         {/* Routes protégées admin */}

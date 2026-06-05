@@ -11,13 +11,14 @@ class CourseController extends Controller
 {
     // Liste tous les cours approuvés
     public function index()
-    {
-        $courses = Course::with('instructor')
-            ->where('status', 'approved')
-            ->get();
+{
+    $courses = Course::with(['instructor', 'videos'])
+        ->where('status', 'approved')
+        ->get();
 
-        return response()->json($courses);
-    }
+    return response()->json($courses);
+}
+
 
     // Détail d'un cours
     public function show($id)
