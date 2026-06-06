@@ -5,10 +5,9 @@ import useAuthStore from './store/authStore'
 import ProtectedRoute from './components/ProtectedRoute'
 import Navbar from './components/Navbar'
 import Sidebar from './components/Sidebar'
-
+import Home from './pages/Home'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
-import Home from './pages/Home'
 import Profile from './pages/profile/Profile'
 import Subscription from './pages/subscription/Subscription'
 import Forum from './pages/forum/Forum'
@@ -53,7 +52,7 @@ export default function App() {
         <Route path="/register" element={<Register />} />
 
         {/* Routes accessibles avec ou sans sidebar */}
-        <Route path="/" element={token ? <Layout><Home /></Layout> : <Home />} />
+        <Route path="/" element={token ? <Layout><Home /></Layout> : <CourseList />} />
         <Route path="/courses/:id" element={token ? <Layout><CourseDetail /></Layout> : <CourseDetail />} />
 
         {/* Routes protégées utilisateur */}

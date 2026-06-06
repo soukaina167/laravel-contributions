@@ -4,13 +4,13 @@ import api from '../lib/axios'
 import Logo from './Logo'
 
 const userLinks = [
-  { path: '/',             icon: 'ti-home',           label: 'Accueil' },
-  { path: '/my-courses',   icon: 'ti-book',           label: 'Mes cours' },
-  { path: '/scheduler',    icon: 'ti-calendar',       label: 'Planning' },
-  { path: '/forum',        icon: 'ti-message-circle', label: 'Forum' },
-  { path: '/subscription', icon: 'ti-star',           label: 'Premium' },
-  { path: '/profile',      icon: 'ti-user',           label: 'Mon profil' },
-  { path: '/courses/create', icon: 'ti-plus',         label: 'Proposer un cours' },
+  { path: '/',               icon: 'ti-home',           label: 'Accueil' },
+  { path: '/my-courses',     icon: 'ti-book',           label: 'Mes cours' },
+  { path: '/scheduler',      icon: 'ti-calendar',       label: 'Planning' },
+  { path: '/subscription',   icon: 'ti-star',           label: 'Premium' },
+  { path: '/ai',             icon: 'ti-robot',          label: 'Assistant IA' },
+  { path: '/profile',        icon: 'ti-user',           label: 'Mon profil' },
+  { path: '/courses/create', icon: 'ti-circle-plus',    label: 'Proposer un cours' },
 ]
 
 const adminLinks = [

@@ -44,56 +44,57 @@ export default function CourseList() {
       <Topbar />
       <div style={{ padding: '24px' }}>
 
-        {/* Hero */}
+        {/* Hero — visible uniquement si non connecté */}
         {!token && (
           <div style={{
             background: '#0f1f3d',
             borderRadius: '10px',
             padding: '36px 40px',
             marginBottom: '24px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
           }}>
-            <div>
-              <h1 style={{
-                color: '#fff', fontSize: '22px',
-                fontWeight: 600, marginBottom: '8px', letterSpacing: '-0.3px',
+            <h1 style={{
+              color: '#fff', fontSize: '22px',
+              fontWeight: 600, marginBottom: '8px', letterSpacing: '-0.3px',
+            }}>
+              Échangez vos compétences, développez votre avenir.
+            </h1>
+            <p style={{
+              color: 'rgba(255,255,255,0.45)', fontSize: '13px',
+              lineHeight: 1.6, maxWidth: '420px', marginBottom: '20px',
+            }}>
+              SkillSwap connecte les apprenants et les formateurs pour un échange de savoirs gagnant-gagnant.
+            </p>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <Link to="/login" style={{
+                background: '#1a56db', color: '#fff',
+                padding: '9px 20px', borderRadius: '6px',
+                fontSize: '13px', fontWeight: 500, textDecoration: 'none',
               }}>
-                Échangez vos compétences, développez votre avenir.
-              </h1>
-              <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '13px', lineHeight: 1.6, maxWidth: '420px' }}>
-                SkillSwap connecte les apprenants et les formateurs pour un échange de savoirs gagnant-gagnant.
-              </p>
-              <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-                <Link to="/register" style={{
-                  background: '#1a56db', color: '#fff',
-                  padding: '9px 20px', borderRadius: '6px',
-                  fontSize: '13px', fontWeight: 500, textDecoration: 'none',
-                }}>
-                  Découvrir les cours
-                </Link>
-                <Link to="/login" style={{
-                  background: 'rgba(255,255,255,0.08)',
-                  border: '0.5px solid rgba(255,255,255,0.15)',
-                  color: 'rgba(255,255,255,0.8)',
-                  padding: '9px 20px', borderRadius: '6px',
-                  fontSize: '13px', textDecoration: 'none',
-                }}>
-                  Se connecter
-                </Link>
-              </div>
+                Découvrir les cours
+              </Link>
+              <Link to="/login" style={{
+                background: 'rgba(255,255,255,0.08)',
+                border: '0.5px solid rgba(255,255,255,0.15)',
+                color: 'rgba(255,255,255,0.8)',
+                padding: '9px 20px', borderRadius: '6px',
+                fontSize: '13px', textDecoration: 'none',
+              }}>
+                Se connecter
+              </Link>
             </div>
           </div>
         )}
 
         {/* Section header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <div style={{
+          display: 'flex', justifyContent: 'space-between',
+          alignItems: 'center', marginBottom: '16px',
+        }}>
           <span style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>
             Cours disponibles
           </span>
           <span style={{ fontSize: '12px', color: '#6b7280' }}>
-            {courses.length} cours
+            {courses.length} formation{courses.length > 1 ? 's' : ''}
           </span>
         </div>
 
@@ -113,8 +114,7 @@ export default function CourseList() {
             gap: '16px',
           }}>
             {courses.map(course => (
-              <Link key={course.id} to={`/courses/${course.id}`} style={cardStyle}>
-                {/* Thumbnail */}
+              <Link key={course.id} to={token ? `/courses/${course.id}` : '/login'} style={cardStyle}>
                 <div style={{
                   height: '120px',
                   background: '#e8edf5',
