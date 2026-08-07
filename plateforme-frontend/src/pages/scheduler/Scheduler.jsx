@@ -1,15 +1,29 @@
 import { useState, useEffect } from 'react'
 import api from '../../lib/axios'
-import Topbar from '../../components/Topbar'
 
 export default function Scheduler() {
-  const [schedule, setSchedule] = useState(null)
-  const [loading, setLoading]   = useState(true)
-  const [message, setMessage]   = useState('')
-  const [courses, setCourses]   = useState([])
-  const [items, setItems]       = useState([{
+  const [schedule, setSchedule]   = useState(null)
+  const [loading, setLoading]     = useState(true)
+  const [generating, setGenerating] = useState(false)
+  const [message, setMessage]     = useState({ text: '', type: '' })
+  const [courses, setCourses]     = useState([])
+  const [activeTab, setActiveTab] = useState('smart')
+  const [accessibleCourses, setAccessibleCourses] = useState([])
+
+  // Formulaire Smart unifié avec selected_courses
+  const [smartForm, setSmartForm] = useState({
+    hours_per_day:  2,
+    start_date:     new Date().toISOString().split('T')[0],
+    days_available: ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'],
+    selected_courses: [], 
+  })
+
+  // Formulaire Manuel
+  const [items, setItems] = useState([{
     course_id: '', planned_date: '', duration: ''
   }])
+
+  const daysOptions = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
 
   useEffect(() => {
     fetchSchedule()
@@ -29,303 +43,371 @@ export default function Scheduler() {
 
   const fetchCourses = async () => {
     try {
-      const res = await api.get('/my-accessible-courses')
-      setCourses(res.data)
+      const [allRes, accessibleRes] = await Promise.all([
+        api.get('/courses'),
+        api.get('/my-accessible-courses').catch(() => ({ data: [] }))
+      ])
+      setCourses(allRes.data)
+      setAccessibleCourses(accessibleRes.data)
     } catch {}
   }
 
-  const addItem = () => {
-    setItems([...items, { course_id: '', planned_date: '', duration: '' }])
+  const toggleDay = (day) => {
+    const days = smartForm.days_available
+    setSmartForm({
+      ...smartForm,
+      days_available: days.includes(day)
+        ? days.filter(d => d !== day)
+        : [...days, day]
+    })
   }
 
-  const removeItem = (index) => {
-    setItems(items.filter((_, i) => i !== index))
+  const handleSmartGenerate = async (e) => {
+    e.preventDefault()
+    if (!smartForm.selected_courses?.length) {
+      setMessage({ text: "Vous devez sélectionner au moins un cours !", type: 'error' })
+      return
+    }
+    setGenerating(true)
+    setMessage({ text: '', type: '' })
+    try {
+      const res = await api.post('/schedule/generate', smartForm)
+      setMessage({ text: res.data.message, type: 'success' })
+      fetchSchedule()
+    } catch (err) {
+      setMessage({ text: err.response?.data?.message || 'Erreur', type: 'error' })
+    } finally {
+      setGenerating(false)
+    }
   }
 
-  const handleChange = (index, field, value) => {
-    const newItems = [...items]
-    newItems[index][field] = value
-    setItems(newItems)
-  }
-
-  const handleSubmit = async (e) => {
+  const handleManualSubmit = async (e) => {
     e.preventDefault()
     try {
       await api.post('/schedule', { items })
-      setMessage('Planning créé avec succès.')
+      setMessage({ text: 'Planning créé avec succès !', type: 'success' })
       fetchSchedule()
     } catch (err) {
-      setMessage(err.response?.data?.message || 'Erreur lors de la création.')
+      setMessage({ text: err.response?.data?.message || 'Erreur', type: 'error' })
     }
   }
 
   const handleDelete = async () => {
     try {
       await api.delete('/schedule')
-      setMessage('Planning supprimé.')
+      setMessage({ text: 'Planning supprimé !', type: 'success' })
       setSchedule(null)
     } catch {}
   }
 
-  if (loading) return (
-    <div style={{ textAlign: 'center', padding: '80px', color: '#9ca3af', fontSize: '13px' }}>
-      Chargement...
-    </div>
-  )
-
-  const statusStyle = (status) => {
-    const map = {
-      done:    { bg: '#dcfce7', color: '#166534', label: 'Terminé' },
-      skipped: { bg: '#fee2e2', color: '#991b1b', label: 'Ignoré' },
-      pending: { bg: '#fef3c7', color: '#92400e', label: 'En attente' },
-    }
-    return map[status] || map.pending
+  const addItem = () => setItems([...items, { course_id: '', planned_date: '', duration: '' }])
+  const removeItem = (i) => setItems(items.filter((_, idx) => idx !== i))
+  const handleChange = (i, field, value) => {
+    const newItems = [...items]
+    newItems[i][field] = value
+    setItems(newItems)
   }
 
+  if (loading) return <p className="text-center mt-20">Chargement...</p>
+
   return (
-    <div>
-      <Topbar title="Smart Scheduler" />
-      <div style={{ padding: '24px', maxWidth: '860px' }}>
+    <div className="max-w-4xl mx-auto">
+      <h1 className="text-3xl font-bold mb-1 flex items-center gap-2">
+        <i className="ti ti-calendar" /> Smart Scheduler
+      </h1>
+      <p className="text-gray-500 mb-6">Organisez vos sessions d'apprentissage et suivez votre progression.</p>
 
-        <div style={{ marginBottom: '24px' }}>
-          <h1 style={{ fontSize: '20px', fontWeight: 600, color: '#111827', marginBottom: '4px' }}>
-            Planification des sessions
-          </h1>
-          <p style={{ fontSize: '13px', color: '#6b7280' }}>
-            Organisez vos sessions d'apprentissage et suivez votre progression.
-          </p>
+      {message.text && (
+        <div className={`p-3 rounded mb-6 flex items-center gap-2 ${message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+          {message.type === 'success' ? <i className="ti ti-check" /> : <i className="ti ti-x" />}
+          <span>{message.text}</span>
         </div>
+      )}
 
-        {message && (
-          <div style={{
-            background: '#f0fdf4', border: '0.5px solid #86efac',
-            color: '#166534', padding: '10px 14px',
-            borderRadius: '8px', fontSize: '13px', marginBottom: '20px',
-          }}>
-            {message}
+      {/* Planning actuel */}
+      {schedule && (
+        <div className="bg-white rounded-xl shadow p-6 mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Planning actuel</h2>
+            <button onClick={handleDelete}
+              className="text-red-500 border border-red-200 px-4 py-2 rounded hover:bg-red-50 text-sm flex items-center gap-2">
+              <i className="ti ti-trash" /> Supprimer le planning
+            </button>
           </div>
-        )}
-
-        {/* Planning existant */}
-        {schedule && (
-          <div style={{
-            background: '#fff', border: '0.5px solid #e5e7eb',
-            borderRadius: '10px', padding: '20px', marginBottom: '20px',
-          }}>
-            <div style={{
-              display: 'flex', justifyContent: 'space-between',
-              alignItems: 'center', marginBottom: '16px',
-            }}>
-              <h2 style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>
-                Planning actuel
-              </h2>
-              <button
-                onClick={handleDelete}
-                style={{
-                  background: 'none', border: '0.5px solid #fca5a5',
-                  color: '#dc2626', cursor: 'pointer',
-                  padding: '5px 12px', borderRadius: '6px',
-                  fontSize: '12px', fontWeight: 500,
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                }}
-              >
-                <i className="ti ti-trash" style={{ fontSize: '14px' }} />
-                Supprimer le planning
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {schedule.items?.map(item => {
-                const s = statusStyle(item.status)
-                return (
-                  <div key={item.id} style={{
-                    display: 'flex', justifyContent: 'space-between',
-                    alignItems: 'center', padding: '12px 14px',
-                    border: '0.5px solid #e5e7eb', borderRadius: '8px',
-                    background: '#fafafa',
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{
-                        width: '36px', height: '36px', borderRadius: '8px',
-                        background: '#eff5ff', flexShrink: 0,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}>
-                        <i className="ti ti-book" style={{ color: '#1a56db', fontSize: '16px' }} />
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '13px', fontWeight: 500, color: '#111827' }}>
-                          {courses.find(c => c.id === item.course_id)?.title || `Cours #${item.course_id}`}
-                        </div>
-                        <div style={{ fontSize: '11px', color: '#9ca3af', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <i className="ti ti-calendar" style={{ fontSize: '11px' }} />
-                          {new Date(item.planned_date).toLocaleDateString('fr-FR')}
-                          <span style={{ marginLeft: '6px' }}>
-                            <i className="ti ti-clock" style={{ fontSize: '11px' }} />
-                            {' '}{item.duration} min
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <span style={{
-                      background: s.bg, color: s.color,
-                      padding: '3px 10px', borderRadius: '4px',
-                      fontSize: '11px', fontWeight: 600,
-                    }}>
-                      {s.label}
-                    </span>
+          <div className="space-y-3">
+            {schedule.items?.map(item => (
+              <div key={item.id} className="border rounded-lg p-4 flex justify-between items-center hover:bg-gray-50">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center text-blue-600">
+                    <i className="ti ti-book" />
                   </div>
-                )
-              })}
-            </div>
+                  <div>
+                    <p className="font-medium text-sm">
+                      {courses.find(c => c.id === item.course_id)?.title || `Cours #${item.course_id}`}
+                    </p>
+                    <p className="text-gray-500 text-xs flex items-center gap-1">
+                      <i className="ti ti-calendar" /> {new Date(item.planned_date).toLocaleDateString('fr-FR')} &nbsp;•&nbsp; <i className="ti ti-clock" /> {item.duration} min
+                    </p>
+                  </div>
+                </div>
+                <span className={`text-xs px-3 py-1 rounded-full font-medium flex items-center gap-1 ${
+                  item.status === 'done'    ? 'bg-green-100 text-green-700' :
+                  item.status === 'skipped' ? 'bg-red-100 text-red-700' :
+                                              'bg-yellow-100 text-yellow-700'
+                }`}>
+                  {item.status === 'done' ? (
+                    <>
+                      <i className="ti ti-check" /> Terminé
+                    </>
+                  ) : item.status === 'skipped' ? (
+                    <>
+                      <i className="ti ti-x" /> Ignoré
+                    </>
+                  ) : (
+                    <>
+                      <i className="ti ti-clock" /> En attente
+                    </>
+                  )}
+                </span>
+              </div>
+            ))}
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Formulaire */}
-        <div style={{
-          background: '#fff', border: '0.5px solid #e5e7eb',
-          borderRadius: '10px', padding: '20px',
-        }}>
-          <h2 style={{ fontSize: '14px', fontWeight: 600, color: '#111827', marginBottom: '20px' }}>
-            {schedule ? 'Modifier le planning' : 'Créer un planning'}
+      {/* Tabs */}
+      <div className="flex gap-2 mb-6">
+        {[
+          { key: 'smart',  label: <><i className="ti ti-robot" /> Génération IA</> },
+          { key: 'manual', label: <>✏️ Manuel</> },
+        ].map(tab => (
+          <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
+              activeTab === tab.key
+                ? 'bg-blue-600 text-white'
+                : 'bg-white border text-gray-600 hover:bg-gray-50'
+            }`}>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Smart Form */}
+      {activeTab === 'smart' && (
+        <div className="bg-white rounded-xl shadow p-6">
+          <h2 className="text-xl font-semibold mb-2 flex items-center gap-2">
+            <i className="ti ti-robot" /> Génération intelligente par IA
           </h2>
+          <p className="text-gray-500 text-sm mb-6">
+            Sélectionnez les cours à planifier, l'IA organisera automatiquement votre planning selon vos disponibilités.
+          </p>
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSmartGenerate} className="space-y-6">
+            {/* Sélection des cours avec Cases à cocher */}
+            <div>
+              <label className="block text-sm font-medium mb-3">
+                <i className="ti ti-books" /> Choisissez les cours à planifier
+              </label>
+              {courses.length === 0 ? (
+                <p className="text-yellow-600 text-sm bg-yellow-50 p-3 rounded">
+                  Aucun cours disponible. Accédez d'abord à des cours depuis la page Cours.
+                </p>
+              ) : (
+                <div className="space-y-2 max-h-60 overflow-y-auto border rounded-lg p-3">
+                  {courses.map(c => {
+                    const hasAccess = accessibleCourses.some(ac => ac.id === c.id)
+                    const isSelected = smartForm.selected_courses?.includes(c.id)
+                    return (
+                      <div key={c.id}
+                        onClick={() => {
+                          const selected = smartForm.selected_courses || []
+                          setSmartForm({
+                            ...smartForm,
+                            selected_courses: isSelected
+                              ? selected.filter(id => id !== c.id)
+                              : [...selected, c.id]
+                          })
+                        }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '10px',
+                          padding: '10px 12px', borderRadius: '8px', cursor: 'pointer',
+                          background: isSelected ? '#eff5ff' : '#f9fafb',
+                          border: `1px solid ${isSelected ? '#1a56db' : '#e5e7eb'}`,
+                        }}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected || false}
+                          onChange={() => {}}
+                          style={{ accentColor: '#1a56db' }}
+                        />
+                        <div style={{ flex: 1 }}>
+                          <p style={{ fontSize: '13px', fontWeight: 500, color: '#111827' }}>
+                            {c.title}
+                          </p>
+                          <p style={{ fontSize: '11px', color: '#6b7280' }}>
+                            {c.skill?.name && (
+                              <span style={{
+                                background: '#eff5ff', color: '#1a56db',
+                                padding: '1px 6px', borderRadius: '4px', marginRight: '6px',
+                              }}>
+                                {c.skill.name}
+                              </span>
+                            )}
+                            {c.credits_cost} crédits
+                            {hasAccess && (
+                              <span style={{ color: '#16a34a', marginLeft: '6px' }}>
+                                ✓ Accès débloqué
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+              <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '6px' }}>
+                {(smartForm.selected_courses?.length || 0)} cours sélectionnés
+              </p>
+            </div>
+
+            {/* Heures disponibles par jour */}
+            <div>
+              <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                <i className="ti ti-clock" /> Heures disponibles par jour
+              </label>
+              <input
+                type="range" min="1" max="8"
+                value={smartForm.hours_per_day}
+                onChange={e => setSmartForm({...smartForm, hours_per_day: parseInt(e.target.value)})}
+                className="w-full"
+              />
+              <p className="text-blue-600 font-semibold text-center mt-1">
+                {smartForm.hours_per_day} heure{smartForm.hours_per_day > 1 ? 's' : ''} / jour
+              </p>
+            </div>
+
+            {/* Date de début */}
+            <div>
+              <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                <i className="ti ti-calendar" /> Date de début
+              </label>
+              <input
+                type="date"
+                value={smartForm.start_date}
+                onChange={e => setSmartForm({...smartForm, start_date: e.target.value})}
+                className="border rounded px-3 py-2 text-sm"
+                required
+              />
+            </div>
+
+            {/* Jours disponibles */}
+            <div>
+              <label className="block text-sm font-medium mb-3 flex items-center gap-2">
+                <i className="ti ti-calendar-week" /> Jours disponibles
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {daysOptions.map(day => (
+                  <button key={day} type="button" onClick={() => toggleDay(day)}
+                    className={`px-3 py-1 rounded-full text-sm font-medium transition ${
+                      smartForm.days_available.includes(day)
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}>
+                    {day}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Bouton de Soumission Smart */}
+            <button
+              type="submit"
+              disabled={generating || !smartForm.selected_courses?.length}
+              className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium flex items-center justify-center gap-2">
+              {generating ? (
+                <>
+                  <i className="ti ti-loader-2 animate-spin" /> L'IA génère votre planning...
+                </>
+              ) : (
+                <>
+                  <i className="ti ti-wand" /> Générer le planning intelligent
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* Manuel Form */}
+      {activeTab === 'manual' && (
+        <div className="bg-white rounded-xl shadow p-6">
+          <h2 className="text-xl font-semibold mb-6">✏️ Créer manuellement</h2>
+          <form onSubmit={handleManualSubmit}>
             {items.map((item, index) => (
-              <div key={index} style={{
-                border: '0.5px solid #e5e7eb', borderRadius: '8px',
-                padding: '16px', marginBottom: '12px', background: '#fafafa',
-              }}>
-                <div style={{
-                  display: 'flex', justifyContent: 'space-between',
-                  alignItems: 'center', marginBottom: '14px',
-                }}>
-                  <span style={{ fontSize: '13px', fontWeight: 500, color: '#374151' }}>
-                    Session {index + 1}
-                  </span>
+              <div key={index} className="border rounded-lg p-4 mb-4 bg-gray-50">
+                <div className="flex justify-between items-center mb-3">
+                  <p className="font-medium text-gray-700 text-sm">Session {index + 1}</p>
                   {items.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeItem(index)}
-                      style={{
-                        background: 'none', border: 'none',
-                        cursor: 'pointer', color: '#dc2626',
-                        display: 'flex', alignItems: 'center',
-                        padding: '4px',
-                      }}
-                      title="Supprimer cette session"
-                    >
-                      <i className="ti ti-trash" style={{ fontSize: '16px' }} />
+                    <button type="button" onClick={() => removeItem(index)}
+                      className="text-red-500 text-sm hover:underline">
+                      Supprimer
                     </button>
                   )}
                 </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label style={{
-                      display: 'block', fontSize: '12px',
-                      fontWeight: 500, color: '#374151', marginBottom: '6px',
-                    }}>
-                      Cours
-                    </label>
+                    <label className="block text-xs font-medium mb-1">Cours</label>
                     <select
                       value={item.course_id}
                       onChange={e => handleChange(index, 'course_id', e.target.value)}
-                      required
-                      style={{
-                        width: '100%', border: '0.5px solid #d1d5db',
-                        borderRadius: '6px', padding: '7px 10px',
-                        fontSize: '13px', background: '#fff',
-                        boxSizing: 'border-box',
-                      }}
-                    >
-                      <option value="">Choisir un cours</option>
-                      {courses.map(c => (
-                        <option key={c.id} value={c.id}>{c.title}</option>
-                      ))}
+                      className="w-full border rounded px-3 py-2 bg-white text-sm"
+                      required>
+                      <option value="">Choisir un cours...</option>
+                      {courses.map(c => {
+                        const hasAccess = accessibleCourses.some(ac => ac.id === c.id)
+                        return (
+                          <option key={c.id} value={c.id}>
+                            {c.title} {hasAccess ? '✓' : `(${c.credits_cost} crédits)`}
+                          </option>
+                        )
+                      })}
                     </select>
                   </div>
-
                   <div>
-                    <label style={{
-                      display: 'block', fontSize: '12px',
-                      fontWeight: 500, color: '#374151', marginBottom: '6px',
-                    }}>
-                      Date planifiée
-                    </label>
-                    <input
-                      type="date"
+                    <label className="block text-xs font-medium mb-1">Date</label>
+                    <input type="date"
                       value={item.planned_date}
                       onChange={e => handleChange(index, 'planned_date', e.target.value)}
-                      required
-                      style={{
-                        width: '100%', border: '0.5px solid #d1d5db',
-                        borderRadius: '6px', padding: '7px 10px',
-                        fontSize: '13px', background: '#fff',
-                        boxSizing: 'border-box',
-                      }}
-                    />
+                      className="w-full border rounded px-3 py-2 text-sm"
+                      required />
                   </div>
-
                   <div>
-                    <label style={{
-                      display: 'block', fontSize: '12px',
-                      fontWeight: 500, color: '#374151', marginBottom: '6px',
-                    }}>
-                      Durée (minutes)
-                    </label>
-                    <input
-                      type="number"
+                    <label className="block text-xs font-medium mb-1">Durée (min)</label>
+                    <input type="number"
                       value={item.duration}
                       onChange={e => handleChange(index, 'duration', e.target.value)}
-                      placeholder="Ex: 60"
-                      min="1"
-                      required
-                      style={{
-                        width: '100%', border: '0.5px solid #d1d5db',
-                        borderRadius: '6px', padding: '7px 10px',
-                        fontSize: '13px', background: '#fff',
-                        boxSizing: 'border-box',
-                      }}
-                    />
+                      placeholder="60"
+                      className="w-full border rounded px-3 py-2 text-sm"
+                      min="1" required />
                   </div>
                 </div>
               </div>
             ))}
 
-            <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
-              <button
-                type="button"
-                onClick={addItem}
-                style={{
-                  background: '#f4f6f9', color: '#374151',
-                  border: '0.5px solid #e5e7eb',
-                  padding: '8px 16px', borderRadius: '6px',
-                  fontSize: '13px', fontWeight: 500, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                }}
-              >
-                <i className="ti ti-plus" style={{ fontSize: '14px' }} />
-                Ajouter une session
+            <div className="flex gap-4 mt-4">
+              <button type="button" onClick={addItem}
+                className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300 text-sm flex items-center gap-1">
+                <i className="ti ti-plus" /> Ajouter une session
               </button>
-
-              <button
-                type="submit"
-                style={{
-                  background: '#1a56db', color: '#fff',
-                  border: 'none', padding: '8px 20px',
-                  borderRadius: '6px', fontSize: '13px',
-                  fontWeight: 500, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                }}
-              >
-                <i className="ti ti-check" style={{ fontSize: '14px' }} />
-                {schedule ? 'Mettre à jour' : 'Créer le planning'}
+              <button type="submit"
+                className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 text-sm flex items-center gap-1">
+                <i className="ti ti-check" /> Créer le planning
               </button>
             </div>
           </form>
         </div>
-
-      </div>
+      )}
     </div>
   )
 }

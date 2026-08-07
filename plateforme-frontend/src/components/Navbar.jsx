@@ -14,13 +14,13 @@ export default function Navbar() {
   }
 
   const links = [
-    { path: '/', label: '🏠 Accueil' },
-    { path: '/courses', label: '📚 Cours' },
-    { path: '/profile', label: '👤 Mon Profil' },
-    { path: '/subscription', label: '⭐ Abonnement' },
-    { path: '/scheduler', label: '📅 Planning' },
-    { path: '/ai', label: '🤖 Assistant IA' },
-  ]
+  { path: '/',            label: 'Accueil',      icon: 'ti-home' },
+  { path: '/courses',     label: 'Cours',        icon: 'ti-books' },
+  { path: '/profile',     label: 'Mon Profil',   icon: 'ti-user-circle' },
+  { path: '/subscription',label: 'Premium',      icon: 'ti-crown' },
+  { path: '/scheduler',   label: 'Planning',     icon: 'ti-calendar-event' },
+  { path: '/ai',          label: 'Assistant IA', icon: 'ti-robot' },
+]
 
   return (
     <div className="w-64 min-h-screen bg-blue-900 text-white flex flex-col p-4 fixed left-0 top-0">
@@ -42,6 +42,7 @@ export default function Navbar() {
             className={`flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-blue-800 transition ${
               location.pathname === link.path ? 'bg-blue-700 font-semibold' : ''
             }`}>
+              <i className={`ti ${link.icon}`} style={{ fontSize: '18px' }} />
             {link.label}
           </Link>
         ))}
@@ -70,5 +71,21 @@ export default function Navbar() {
         </button>
       </div>
     </div>
+    
   )
+  {/* Crédits */}
+<div style={{
+  background: '#1e3a5f',
+  borderRadius: '6px',
+  padding: '6px 12px',
+  marginBottom: '8px',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '6px',
+}}>
+  <span style={{ fontSize: '14px' }}>💎</span>
+  <span style={{ fontSize: '12px', color: '#93c5fd' }}>
+    {user?.credits ?? 0} crédits
+  </span>
+</div>
 }

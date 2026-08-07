@@ -11,10 +11,10 @@ export default function AdminDashboard() {
   }, [])
 
   const statCards = stats ? [
-    { label: 'Utilisateurs',    value: stats.total_users,    icon: 'ti-users',     sub: 'inscrits' },
-    { label: 'Cours publiés',   value: stats.total_courses,  icon: 'ti-book',      sub: 'au total' },
-    { label: 'En attente',      value: stats.pending_videos, icon: 'ti-clock',     sub: 'à modérer', alert: true },
-    { label: 'Abonnés premium', value: stats.premium_users,  icon: 'ti-star',      sub: 'utilisateurs' },
+    { to: '/admin/videos', icon: 'ti-video',        label: 'Modérer les vidéos' },
+{ to: '/admin/users',  icon: 'ti-users',         label: 'Gérer les utilisateurs' },
+{ to: '/admin/categories', icon: 'ti-category',  label: 'Catégories' },
+{ to: '/admin/subscriptions', icon: 'ti-crown',  label: 'Abonnements' },
   ] : []
 
   return (

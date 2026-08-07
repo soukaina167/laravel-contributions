@@ -3,12 +3,13 @@ import { useParams, Link } from 'react-router-dom'
 import api from '../../lib/axios'
 import useAuthStore from '../../store/authStore'
 import Topbar from '../../components/Topbar'
+import CourseForum from '../forum/CourseForum'
 
 const tabs = [
-  { key: 'video',   label: 'Vidéo' },
-  { key: 'notes',   label: 'Notes & PDF' },
-  { key: 'forum',   label: 'Forum' },
-  { key: 'reviews', label: 'Avis' },
+  { key: 'video',   label: 'Vidéo',      icon: 'ti-player-play' },
+  { key: 'notes',   label: 'Notes & PDF', icon: 'ti-file-text' },
+  { key: 'forum',   label: 'Forum',       icon: 'ti-message-circle-2' },
+  { key: 'reviews', label: 'Avis',        icon: 'ti-star' },
 ]
 
 export default function CourseDetail() {
@@ -22,6 +23,7 @@ export default function CourseDetail() {
   const [review, setReview]       = useState({ rating: 5, comment: '' })
   const [newNote, setNewNote]   = useState({ type: 'pdf', file: null })
   const [uploading, setUploading] = useState(false)
+  const [hasAccess, setHasAccess] = useState(false)
   const { token, user }           = useAuthStore()
 
   useEffect(() => {
@@ -30,8 +32,22 @@ export default function CourseDetail() {
   }, [id])
 
   const fetchCourse  = async () => {
-    try { const res = await api.get(`/courses/${id}`); setCourse(res.data) }
+    try {
+      const res = await api.get(`/courses/${id}`)
+      setCourse(res.data)
+      checkAccess()
+    }
     finally { setLoading(false) }
+  }
+
+  const checkAccess = async () => {
+    try {
+      const res = await api.get('/my-accessible-courses')
+      const accessible = res.data.some(c => c.id === parseInt(id))
+      setHasAccess(accessible)
+    } catch {
+      setHasAccess(false)
+    }
   }
   const fetchNotes   = async () => {
     try { const res = await api.get(`/courses/${id}/notes`); setNotes(res.data) }
@@ -42,7 +58,11 @@ export default function CourseDetail() {
     catch { setReviews([]) }
   }
   const handleAccess = async () => {
-    try { const res = await api.post(`/courses/${id}/access`); setMessage(res.data.message) }
+    try {
+      const res = await api.post(`/courses/${id}/access`)
+      setMessage(res.data.message)
+      checkAccess()
+    }
     catch (err) { setMessage(err.response?.data?.message || 'Erreur') }
   }
   const handleReview = async (e) => {
@@ -50,6 +70,20 @@ export default function CourseDetail() {
     try { await api.post(`/courses/${id}/reviews`, review); setReview({ rating: 5, comment: '' }); fetchReviews() }
     catch {}
   }
+  const [summary, setSummary] = useState('')
+const [loadingSummary, setLoadingSummary] = useState(false)
+
+const handleSummary = async () => {
+  setLoadingSummary(true)
+  try {
+    const res = await api.post('/ai/summarize', { course_id: id })
+    setSummary(res.data.summary)
+  } catch {
+    setSummary('Erreur lors de la génération du résumé')
+  } finally {
+    setLoadingSummary(false)
+  }
+}
 
   if (loading) return (
     <div style={{ textAlign: 'center', padding: '80px', color: '#9ca3af', fontSize: '13px' }}>
@@ -117,7 +151,7 @@ export default function CourseDetail() {
               </div>
             </div>
 
-            {token && (
+            {token && !hasAccess && (
               <button
                 onClick={handleAccess}
                 style={{
@@ -129,9 +163,50 @@ export default function CourseDetail() {
                 Accéder au cours
               </button>
             )}
+
+            {token && hasAccess && (
+              <span style={{
+                background: '#f0fdf4', color: '#166534',
+                padding: '9px 20px', borderRadius: '6px',
+                fontSize: '13px', fontWeight: 500, flexShrink: 0,
+                border: '0.5px solid #86efac',
+              }}>
+                ✓ Accès débloqué
+              </span>
+            )}
           </div>
+          {/* Bouton Résumé IA */}
+          <button
+            onClick={handleSummary}
+            disabled={loadingSummary}
+            style={{
+              background: '#7c3aed', color: '#fff', border: 'none',
+              padding: '7px 16px', borderRadius: '6px',
+              fontSize: '13px', fontWeight: 500, cursor: 'pointer',
+              marginBottom: '16px',
+            }}
+          >
+            {loadingSummary ? '⏳ Génération...' : '🤖 Résumé IA'}
+          </button>
+
+          {summary && (
+            <div style={{
+              background: '#f5f3ff', border: '0.5px solid #c4b5fd',
+              borderRadius: '10px', padding: '16px', marginBottom: '16px',
+            }}>
+              <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#5b21b6', marginBottom: '8px' }}>
+                🤖 Résumé IA
+              </h3>
+              <p style={{ fontSize: '13px', color: '#374151', lineHeight: 1.6 }}>
+                {summary}
+              </p>
+            </div>
+          )}
+
+          
 
           {message && (
+
             <div style={{
               background: '#f0fdf4', border: '0.5px solid #86efac',
               color: '#166534', padding: '10px 14px', borderRadius: '8px',
@@ -160,6 +235,7 @@ export default function CourseDetail() {
                   boxShadow: activeTab === tab.key ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
                 }}
               >
+                <i className={`ti ${tab.icon}`} style={{ marginRight: '6px' }} />
                 {tab.label}
               </button>
             ))}
@@ -167,22 +243,45 @@ export default function CourseDetail() {
 
           {/* Tab — Vidéo */}
           {activeTab === 'video' && (
-            <div style={{
-              background: '#0f1f3d', borderRadius: '10px',
-              height: '360px', display: 'flex',
-              alignItems: 'center', justifyContent: 'center',
-            }}>
-              {course.video_url ? (
-                <video controls style={{ width: '100%', height: '100%', borderRadius: '10px' }} src={course.video_url} />
-              ) : (
-                <div style={{ textAlign: 'center' }}>
-                  <i className="ti ti-video-off" style={{ fontSize: '36px', color: 'rgba(255,255,255,0.2)' }} />
-                  <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px', marginTop: '8px' }}>
-                    Aucune vidéo disponible
-                  </p>
-                </div>
-              )}
-            </div>
+            <>
+              <div style={{
+                background: '#0f1f3d', borderRadius: '10px',
+                height: '360px', display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                marginBottom: '16px',
+              }}>
+                {!hasAccess ? (
+                  <div style={{ textAlign: 'center', padding: '20px' }}>
+                    <i className="ti ti-lock" style={{ fontSize: '36px', color: 'rgba(255,255,255,0.3)' }} />
+                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', margin: '12px 0' }}>
+                      Vous devez accéder à ce cours ({course.credits_cost} crédits) pour voir la vidéo
+                    </p>
+                    <button
+                      onClick={handleAccess}
+                      style={{
+                        background: '#1a56db', color: '#fff', border: 'none',
+                        padding: '9px 20px', borderRadius: '6px',
+                        fontSize: '13px', fontWeight: 500, cursor: 'pointer',
+                      }}
+                    >
+                      Débloquer l'accès
+                    </button>
+                  </div>
+                ) : course.video_url ? (
+                  <video controls style={{ width: '100%', height: '100%', borderRadius: '10px' }} src={course.video_url} />
+                ) : (
+                  <div style={{ textAlign: 'center' }}>
+                    <i className="ti ti-video-off" style={{ fontSize: '36px', color: 'rgba(255,255,255,0.2)' }} />
+                    <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px', marginTop: '8px' }}>
+                      Aucune vidéo disponible
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Forum toujours visible sous la vidéo */}
+              <CourseForum courseId={id} />
+            </>
           )}
 
           {/* Tab — Notes & PDF */}
@@ -264,8 +363,8 @@ export default function CourseDetail() {
         </div>
 
       {(user?.role?.name === 'premium' || user?.role?.name === 'admin') ? (
-  <a
-    href={note.url}
+  
+    <a> href={note.url}
     target="_blank"
     rel="noreferrer"
     style={{
@@ -277,7 +376,7 @@ export default function CourseDetail() {
       textDecoration: 'none',
       fontWeight: 500,
     }}
-  >
+  
     Télécharger
   </a>
 ) : (
@@ -302,26 +401,7 @@ export default function CourseDetail() {
   </div>
 )}
 
-          {/* Tab — Forum */}
-          {activeTab === 'forum' && (
-            <div style={{
-              background: '#fff', border: '0.5px solid #e5e7eb',
-              borderRadius: '10px', padding: '32px',
-              textAlign: 'center',
-            }}>
-              <i className="ti ti-message-circle" style={{ fontSize: '32px', color: '#d1d5db' }} />
-              <p style={{ color: '#6b7280', fontSize: '13px', margin: '10px 0 20px' }}>
-                Posez vos questions et échangez avec la communauté.
-              </p>
-              <Link to={`/courses/${id}/forum`} style={{
-                background: '#1a56db', color: '#fff',
-                padding: '9px 20px', borderRadius: '6px',
-                fontSize: '13px', fontWeight: 500, textDecoration: 'none',
-              }}>
-                Accéder au forum
-              </Link>
-            </div>
-          )}
+          
 
           {/* Tab — Avis */}
           {activeTab === 'reviews' && (

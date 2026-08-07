@@ -43,18 +43,7 @@ export default function Profile() {
     <div className="max-w-2xl mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold mb-6">Mon Profil</h1>
 
-      {/* Quota */}
-      {quota && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <p className="font-medium text-blue-700">
-            Type : {quota.type === 'premium' ? '⭐ Premium' : 'Standard'}
-          </p>
-          <p className="text-blue-600">
-            Cours regardés : {quota.videos_watched} / {quota.limit}
-          </p>
-        </div>
-      )}
-
+    
       {message && (
         <div className="bg-green-100 text-green-700 p-3 rounded mb-4">
           {message}

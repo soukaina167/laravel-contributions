@@ -1,15 +1,29 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../lib/axios'
 
 export default function CreateCourse() {
   const [form, setForm] = useState({
-    title: '', description: '', credits_cost: 0
+    title: '', description: '', credits_cost: 0, skill_id: ''
   })
   const [video, setVideo]     = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
+  const [skills, setSkills]   = useState([])
   const navigate              = useNavigate()
+
+  useEffect(() => {
+    fetchSkills()
+  }, [])
+
+  const fetchSkills = async () => {
+    try {
+      const res = await api.get('/skills') // 👈 change ici
+      setSkills(res.data)
+    } catch {
+      setSkills([])
+    }
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -21,6 +35,9 @@ export default function CreateCourse() {
     formData.append('description',  form.description)
     formData.append('credits_cost', form.credits_cost)
     formData.append('video',        video)
+    if (form.skill_id) {
+      formData.append('skill_id', form.skill_id)
+    }
 
     try {
       await api.post('/courses', formData, {
@@ -64,6 +81,31 @@ export default function CreateCourse() {
             className="w-full border rounded px-3 py-2 h-32"
             required
           />
+        </div>
+
+        {/* 👇 Nouveau champ catégorie */}
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Catégorie
+          </label>
+          {skills.length > 0 ? (
+            <select
+              value={form.skill_id}
+              onChange={e => setForm({...form, skill_id: e.target.value})}
+              className="w-full border rounded px-3 py-2"
+            >
+              <option value="">-- Choisir une catégorie --</option>
+              {skills.map(skill => (
+                <option key={skill.id} value={skill.id}>
+                  {skill.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <p className="text-sm text-gray-400 italic">
+              Aucune catégorie disponible — demandez à l'admin d'en créer.
+            </p>
+          )}
         </div>
 
         <div>

@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import NotificationBell from './NotificationBell'
 
 export default function Topbar({ title = '' }) {
   const [search, setSearch] = useState('')
-  const navigate            = useNavigate()
+  const navigate = useNavigate()
 
   const handleSearch = (e) => {
     e.preventDefault()
@@ -23,7 +24,6 @@ export default function Topbar({ title = '' }) {
       top: 0,
       zIndex: 40,
     }}>
-
       {title && (
         <span style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>
           {title}
@@ -53,22 +53,20 @@ export default function Topbar({ title = '' }) {
       </form>
 
       <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        {[
-          { icon: 'ti-bell' },
-          { icon: 'ti-settings' },
-        ].map(({ icon }) => (
-          <div key={icon} style={{
-            width: '32px', height: '32px',
-            borderRadius: '6px',
-            border: '0.5px solid #e5e7eb',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#6b7280', fontSize: '16px', cursor: 'pointer',
-          }}>
-            <i className={`ti ${icon}`} />
-          </div>
-        ))}
-      </div>
+        {/* NotificationBell remplace l'icône statique */}
+        <NotificationBell />
 
+        {/* Bouton paramètres */}
+        <div style={{
+          width: '32px', height: '32px',
+          borderRadius: '6px',
+          border: '0.5px solid #e5e7eb',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: '#6b7280', fontSize: '16px', cursor: 'pointer',
+        }}>
+          <i className="ti ti-settings" />
+        </div>
+      </div>
     </header>
   )
 }

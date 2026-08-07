@@ -5,19 +5,30 @@ import Topbar from '../../components/Topbar'
 import useAuthStore from '../../store/authStore'
 
 export default function CourseList() {
-  const [courses, setCourses] = useState([])
-  const [loading, setLoading] = useState(true)
-  const { token }             = useAuthStore()
-  const [searchParams]        = useSearchParams()
+  const [courses, setCourses]         = useState([])
+  const [skills, setSkills]           = useState([])
+  const [selectedSkill, setSelectedSkill] = useState(null)
+  const [loading, setLoading]         = useState(true)
+  const { token }                     = useAuthStore()
+  const [searchParams]                = useSearchParams()
 
   useEffect(() => {
+    fetchSkills()
     const q = searchParams.get('q')
     q ? searchCourses(q) : fetchCourses()
   }, [searchParams])
 
-  const fetchCourses = async () => {
+  const fetchSkills = async () => {
     try {
-      const res = await api.get('/courses')
+      const res = await api.get('/skills')
+      setSkills(res.data)
+    } catch {}
+  }
+
+  const fetchCourses = async (skillId = null) => {
+    try {
+      const url = skillId ? `/courses/category/${skillId}` : '/courses'
+      const res = await api.get(url)
       setCourses(res.data)
     } finally { setLoading(false) }
   }
@@ -29,14 +40,10 @@ export default function CourseList() {
     } finally { setLoading(false) }
   }
 
-  const cardStyle = {
-    background: '#fff',
-    border: '0.5px solid #e5e7eb',
-    borderRadius: '10px',
-    overflow: 'hidden',
-    textDecoration: 'none',
-    display: 'block',
-    transition: 'box-shadow 0.15s',
+  const handleSkillFilter = (skillId) => {
+    setSelectedSkill(skillId)
+    setLoading(true)
+    fetchCourses(skillId)
   }
 
   return (
@@ -44,43 +51,37 @@ export default function CourseList() {
       <Topbar />
       <div style={{ padding: '24px' }}>
 
-        {/* Hero — visible uniquement si non connecté */}
-        {!token && (
-          <div style={{
-            background: '#0f1f3d',
-            borderRadius: '10px',
-            padding: '36px 40px',
-            marginBottom: '24px',
-          }}>
-            <h1 style={{
-              color: '#fff', fontSize: '22px',
-              fontWeight: 600, marginBottom: '8px', letterSpacing: '-0.3px',
-            }}>
-              Échangez vos compétences, développez votre avenir.
-            </h1>
-            <p style={{
-              color: 'rgba(255,255,255,0.45)', fontSize: '13px',
-              lineHeight: 1.6, maxWidth: '420px', marginBottom: '20px',
-            }}>
-              SkillSwap connecte les apprenants et les formateurs pour un échange de savoirs gagnant-gagnant.
+        {/* Filtres catégories */}
+        {skills.length > 0 && (
+          <div style={{ marginBottom: '20px' }}>
+            <p style={{ fontSize: '12px', fontWeight: 600, color: '#6b7280', marginBottom: '8px' }}>
+              CATÉGORIES
             </p>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <Link to="/login" style={{
-                background: '#1a56db', color: '#fff',
-                padding: '9px 20px', borderRadius: '6px',
-                fontSize: '13px', fontWeight: 500, textDecoration: 'none',
-              }}>
-                Découvrir les cours
-              </Link>
-              <Link to="/login" style={{
-                background: 'rgba(255,255,255,0.08)',
-                border: '0.5px solid rgba(255,255,255,0.15)',
-                color: 'rgba(255,255,255,0.8)',
-                padding: '9px 20px', borderRadius: '6px',
-                fontSize: '13px', textDecoration: 'none',
-              }}>
-                Se connecter
-              </Link>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => handleSkillFilter(null)}
+                style={{
+                  padding: '6px 14px', borderRadius: '20px',
+                  fontSize: '12px', fontWeight: 500, cursor: 'pointer',
+                  background: !selectedSkill ? '#1a56db' : '#f3f4f6',
+                  color: !selectedSkill ? '#fff' : '#374151',
+                  border: 'none',
+                }}>
+                Tous
+              </button>
+              {skills.map(skill => (
+                <button key={skill.id}
+                  onClick={() => handleSkillFilter(skill.id)}
+                  style={{
+                    padding: '6px 14px', borderRadius: '20px',
+                    fontSize: '12px', fontWeight: 500, cursor: 'pointer',
+                    background: selectedSkill === skill.id ? '#1a56db' : '#f3f4f6',
+                    color: selectedSkill === skill.id ? '#fff' : '#374151',
+                    border: 'none',
+                  }}>
+                  {skill.name}
+                </button>
+              ))}
             </div>
           </div>
         )}
@@ -91,21 +92,23 @@ export default function CourseList() {
           alignItems: 'center', marginBottom: '16px',
         }}>
           <span style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>
-            Cours disponibles
+            {selectedSkill
+              ? `Cours : ${skills.find(s => s.id === selectedSkill)?.name}`
+              : 'Cours disponibles'}
           </span>
           <span style={{ fontSize: '12px', color: '#6b7280' }}>
             {courses.length} formation{courses.length > 1 ? 's' : ''}
           </span>
         </div>
 
-        {/* Grille */}
+        {/* Grille cours */}
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '60px', color: '#9ca3af', fontSize: '13px' }}>
+          <div style={{ textAlign: 'center', padding: '60px', color: '#9ca3af' }}>
             Chargement...
           </div>
         ) : courses.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px', color: '#9ca3af', fontSize: '13px' }}>
-            Aucun cours disponible.
+          <div style={{ textAlign: 'center', padding: '60px', color: '#9ca3af' }}>
+            Aucun cours dans cette catégorie.
           </div>
         ) : (
           <div style={{
@@ -114,15 +117,20 @@ export default function CourseList() {
             gap: '16px',
           }}>
             {courses.map(course => (
-              <Link key={course.id} to={token ? `/courses/${course.id}` : '/login'} style={cardStyle}>
+              <Link key={course.id}
+                to={token ? `/courses/${course.id}` : '/login'}
+                style={{
+                  background: '#fff', border: '0.5px solid #e5e7eb',
+                  borderRadius: '10px', overflow: 'hidden',
+                  textDecoration: 'none', display: 'block',
+                }}>
                 <div style={{
-                  height: '120px',
-                  background: '#e8edf5',
+                  height: '120px', background: '#e8edf5',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                   <div style={{
-                    width: '44px', height: '44px',
-                    borderRadius: '10px', background: '#1a56db',
+                    width: '44px', height: '44px', borderRadius: '10px',
+                    background: '#1a56db',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
                     <i className="ti ti-video" style={{ color: '#fff', fontSize: '20px' }} />
@@ -130,21 +138,21 @@ export default function CourseList() {
                 </div>
 
                 <div style={{ padding: '14px' }}>
+                  {/* Catégorie badge */}
+                  {course.skill && (
+                    <span style={{
+                      fontSize: '10px', fontWeight: 600,
+                      color: '#1a56db', background: '#eff5ff',
+                      padding: '2px 8px', borderRadius: '4px',
+                      display: 'inline-block', marginBottom: '6px',
+                    }}>
+                      {course.skill.name}
+                    </span>
+                  )}
+
                   <div style={{
-                    fontSize: '10px', fontWeight: 600,
-                    color: '#1a56db', letterSpacing: '0.5px',
-                    textTransform: 'uppercase', marginBottom: '4px',
-                  }}>
-                    Formation
-                  </div>
-                  <div style={{
-                    fontSize: '13px', fontWeight: 500,
-                    color: '#111827', lineHeight: 1.4,
-                    marginBottom: '10px',
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
+                    fontSize: '13px', fontWeight: 500, color: '#111827',
+                    marginBottom: '10px', lineHeight: 1.4,
                   }}>
                     {course.title}
                   </div>
@@ -153,9 +161,16 @@ export default function CourseList() {
                     display: 'flex', justifyContent: 'space-between',
                     alignItems: 'center', fontSize: '12px',
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#6b7280' }}>
-                      <i className="ti ti-star" style={{ color: '#f59e0b', fontSize: '12px' }} />
-                      {course.rating || 0}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      {[1,2,3,4,5].map(star => (
+                        <span key={star} style={{
+                          color: star <= Math.round(course.rating) ? '#f59e0b' : '#d1d5db',
+                          fontSize: '11px'
+                        }}>★</span>
+                      ))}
+                      <span style={{ color: '#9ca3af', fontSize: '11px' }}>
+                        ({course.rating || 0})
+                      </span>
                     </div>
                     <span style={{ color: '#1a56db', fontWeight: 500 }}>
                       {course.credits_cost} crédits

@@ -21,6 +21,8 @@ import CourseList from './pages/courses/CourseList'
 import CourseDetail from './pages/courses/CourseDetail'
 import CreateCourse from './pages/courses/CreateCourse'
 import NotFound from './pages/NotFound'
+import AdminSubscriptions from './pages/admin/AdminSubscriptions'
+import AdminCategories from './pages/admin/AdminCategories'
 
 function Layout({ children }) {
   return (
@@ -72,6 +74,8 @@ export default function App() {
           <Route path="/admin" element={<Layout><AdminDashboard /></Layout>} />
           <Route path="/admin/videos" element={<Layout><AdminVideos /></Layout>} />
           <Route path="/admin/users" element={<Layout><AdminUsers /></Layout>} />
+          <Route path="/admin/subscriptions" element={<Layout><AdminSubscriptions /></Layout>} />
+          <Route path="/admin/categories" element={<Layout><AdminCategories /></Layout>} />
         </Route>
 
         {/* 404 */}
